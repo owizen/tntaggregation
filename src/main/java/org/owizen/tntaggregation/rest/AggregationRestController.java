@@ -2,6 +2,7 @@ package org.owizen.tntaggregation.rest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.owizen.tntaggregation.model.Aggregation;
 import org.owizen.tntaggregation.service.PricingService;
@@ -36,20 +37,23 @@ public class AggregationRestController {
 			@RequestParam(name = "pricing", required = false) List<String> pricing,
 			@RequestParam(name = "track", required = false) List<Long> track,
 			@RequestParam(name = "shipments", required = false) List<Long> shipments) {
-
-		Map<String, Double>     p;
-		Map<Long, String>       t;
-		Map<Long, List<String>> s;
+		CompletableFuture<Map<String, Double>>     p;
+		CompletableFuture<Map<Long, String>>       t;
+		CompletableFuture<Map<Long, List<String>>> s;
 
 		try {
-			p = pricingService.fetch(pricing);
-			t = trackService.fetch(track);
-			s = shipmentsService.fetch(shipments);
-		} catch (Exception e) {
-			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "TNT API not available (CODE 503)\n");
-		}
+			p = pricingService.get(pricing);
+			t = trackService.get(track);
+			s = shipmentsService.get(shipments);
 
-		return new Aggregation(p, t, s);
+			CompletableFuture<Void> lock = CompletableFuture.allOf(p, s, t);
+
+			lock.join();
+
+			return new Aggregation(p.get(), t.get(), s.get());
+		} catch (Exception e) {
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
+		}
 	}
 
 }

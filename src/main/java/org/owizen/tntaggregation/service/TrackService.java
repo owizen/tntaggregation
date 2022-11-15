@@ -1,8 +1,12 @@
 package org.owizen.tntaggregation.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import org.owizen.tntaggregation.config.ApiConfig;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 
@@ -10,13 +14,19 @@ import org.springframework.stereotype.Service;
 public class TrackService extends AbstractMapAPIService<Long, String> {
 
 
-	public TrackService(ApiConfig config) {
-		super(config.getApiUrl(), config.getTrackPath(), LONG_STRING_MAP_REF);
+	public TrackService(ApiConfig config, Executor executor) {
+		super(config.getApiUrl(), config.getTrackPath(), LONG_STRING_MAP_REF, executor);
 	}
 
 	@Override
 	protected String toQuery(List<Long> items) {
 		return toQueryFromLong(items);
+	}
+
+	@Override
+	@Async(value = "asyncExecutor")
+	public CompletableFuture<Map<Long, String>> get(List<Long> items) throws InterruptedException {
+		return super.get(items);
 	}
 
 }

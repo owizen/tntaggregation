@@ -22,6 +22,7 @@ public class AggregationRestController {
 	private TrackService trackService;
 	private ShipmentsService shipmentsService;
 
+	private AllOfCompletableFutureProvider provider = new AllOfCompletableFutureProvider();
 
 
 	public AggregationRestController(PricingService pricingService, TrackService trackService, ShipmentsService shipmentsService) {
@@ -46,7 +47,7 @@ public class AggregationRestController {
 			t = trackService.get(track);
 			s = shipmentsService.get(shipments);
 
-			CompletableFuture<Void> lock = CompletableFuture.allOf(p, s, t);
+			CompletableFuture<Void> lock = provider.allOf(p, s, t);
 
 			lock.join();
 

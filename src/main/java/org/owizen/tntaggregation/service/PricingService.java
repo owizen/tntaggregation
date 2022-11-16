@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import org.owizen.tntaggregation.config.ApiConfig;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class PricingService extends AbstractMapAPIService<String, Double> {
 
 
-	public PricingService(ApiConfig config, Executor executor) {
+	public PricingService(ApiConfig config, @Qualifier("asyncExecutor") Executor executor) {
 		super(config.getApiUrl(), config.getPricingPath(), STRING_DOUBLE_MAP_REF, executor);
 	}
 

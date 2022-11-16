@@ -49,6 +49,8 @@ public class FetchRunnable<K, V> implements Runnable {
 		}
 
 		update(candidates, bulk);
+
+		service.setFetching(false);
 	}
 
 	private void update(List<K> candidates, Map<K, V> bulk) {

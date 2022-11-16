@@ -15,11 +15,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.reactive.function.client.WebClient;
 
 
 public abstract class AbstractMapAPIService<K, V> {
 
+
+	private static final int FETCH_MAX_TIME_ELAPSED = 5000;
 
 	private static final int MAX_QUEUE_SIZE = 5;
 
@@ -43,6 +46,10 @@ public abstract class AbstractMapAPIService<K, V> {
 
 	private String serviceName = getClass().getSimpleName();
 
+	private boolean fetching = false;
+
+	private long lastInsert = System.currentTimeMillis();
+
 
 	public AbstractMapAPIService(String apiUrl, String path, ParameterizedTypeReference<Map<K, V>> mapTypeRef, Executor executor) {
 		super();
@@ -51,6 +58,36 @@ public abstract class AbstractMapAPIService<K, V> {
 		this.client     = WebClient.create(apiUrl);
 		this.mapTypeRef = mapTypeRef;
 		this.executor   = executor;
+	}
+
+	private void updateLastInsert() {
+		lastInsert = System.currentTimeMillis();
+	}
+
+	@Scheduled(fixedRate = 2000)
+	public void timer() {
+		if (fetching) {
+			logger.debug("{} Ongoing fetching detected, aborting scheduling", serviceName);
+			return;
+		}
+
+		if (pending.isEmpty()) {
+			logger.debug("{} No pending fetching to process, aborting scheduling", serviceName);
+			return;
+		}
+
+		if (! insertEOLlapsed()) {
+			logger.debug("{} Fetch max time not reached, aborting scheduling", serviceName);
+			return;
+		}
+
+		logger.info("{} perform schduled fetching", serviceName);
+
+		fetch(queue.size());
+	}
+
+	private boolean insertEOLlapsed() {
+		return System.currentTimeMillis() - lastInsert > FETCH_MAX_TIME_ELAPSED;
 	}
 
 	public Map<K,V> fetch(List<K> keys) {
@@ -67,7 +104,9 @@ public abstract class AbstractMapAPIService<K, V> {
 	private void submit(List<K> keys, CompletableFuture<Map<K,V>> future) {
 		if (keys == null) {
 			future.complete(new HashMap<>());
+			return;
 		}
+
 		int oldSize = pending.size();
 
 		pending.put(future, keys);
@@ -76,15 +115,23 @@ public abstract class AbstractMapAPIService<K, V> {
 
 		queue.addAll(keys);
 
-		fetch();
-	}
+		updateLastInsert();
 
-	private void fetch() {
 		int size = queue.size();
 
 		if (size < MAX_QUEUE_SIZE) {
 			return;
 		}
+
+		fetch(size);
+	}
+
+	private void fetch(int size) {
+		if (fetching) {
+			return;
+		}
+
+		fetching = true;
 
 		List<K> candidates = new ArrayList<>();
 
@@ -107,13 +154,13 @@ public abstract class AbstractMapAPIService<K, V> {
 
 		CompletableFuture<Map<K,V>> future = new CompletableFuture<>();
 
+		submit(items, future);
+
 		try {
 			Thread.sleep(50);
 		} catch (InterruptedException e) {
 			throw e;
 		}
-
-		submit(items, future);
 
 		return future;
 	}
@@ -132,6 +179,10 @@ public abstract class AbstractMapAPIService<K, V> {
 
 	public String getServiceName() {
 		return serviceName;
+	}
+
+	public void setFetching(boolean fetching) {
+		this.fetching = fetching;
 	}
 
 	protected abstract String toQuery(List<K> items);

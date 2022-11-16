@@ -19,10 +19,6 @@ public class TrackService extends AbstractMapAPIService<Long, String> {
 		super(config.getApiUrl(), config.getTrackPath(), LONG_STRING_MAP_REF, executor);
 	}
 
-	@Override
-	protected String toQuery(List<Long> items) {
-		return toQueryFromLong(items);
-	}
 
 	@Override
 	@Async(value = "asyncExecutor")

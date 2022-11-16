@@ -20,11 +20,6 @@ public class PricingService extends AbstractMapAPIService<String, Double> {
 	}
 
 	@Override
-	protected String toQuery(List<String> items) {
-		return toQueryFromString(items);
-	}
-
-	@Override
 	@Async(value = "asyncExecutor")
 	public CompletableFuture<Map<String, Double>> get(List<String> items) throws InterruptedException {
 		return super.get(items);

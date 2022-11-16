@@ -165,14 +165,6 @@ public abstract class AbstractMapAPIService<K, V> {
 		return future;
 	}
 
-	protected String toQueryFromLong(List<Long> items) {
-		return items.stream().map(Object::toString).collect(Collectors.joining(","));
-	}
-
-	protected String toQueryFromString(List<String> pricing) {
-		return String.join(",", pricing.toArray(new String[pricing.size()]));
-	}
-
 	public Map<CompletableFuture<Map<K, V>>, List<K>> getPending() {
 		return pending;
 	}
@@ -185,6 +177,9 @@ public abstract class AbstractMapAPIService<K, V> {
 		this.fetching = fetching;
 	}
 
-	protected abstract String toQuery(List<K> items);
+	protected String toQuery(List<K> items) {
+		return items.stream().map(Object::toString).collect(Collectors.joining(","));
+
+	}
 
 }

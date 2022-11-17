@@ -11,6 +11,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 
+/**
+ *The service responsible for fetching pricing from the remote API.
+ */
 @Service
 public class PricingService extends AbstractMapAPIService<String, Double> {
 

@@ -3,6 +3,9 @@ package org.owizen.tntaggregation.model;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The Aggregation POJO to be returned by the API.
+ */
 public class Aggregation {
 
 

@@ -11,6 +11,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 
+/**
+ *The service responsible for fetching track from the remote API.
+ */
 @Service
 public class TrackService extends AbstractMapAPIService<Long, String> {
 

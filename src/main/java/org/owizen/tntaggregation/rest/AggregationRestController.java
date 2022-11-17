@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * The AggregationRestController responsible for returning aggregated data of single request from the remotes APIs.
+ */
 @RestController
 public class AggregationRestController {
 
@@ -25,6 +28,13 @@ public class AggregationRestController {
 	private AllOfCompletableFutureProvider provider = new AllOfCompletableFutureProvider();
 
 
+	/**
+	 * Constructor.
+	 *
+	 * @param pricingService   The Service responsible for returning pricing data of the remote API
+	 * @param trackService     The Service responsible for returning tract data of the remote API
+	 * @param shipmentsService The Service responsible for returning shipments data of the remote API
+	 */
 	public AggregationRestController(PricingService pricingService, TrackService trackService, ShipmentsService shipmentsService) {
 		super();
 
@@ -33,6 +43,15 @@ public class AggregationRestController {
 		this.shipmentsService = shipmentsService;
 	}
 
+	/**
+	 * Returns an Aggregation matching the HTTP request as json.
+	 *
+	 * @param pricing   The requested pricing
+	 * @param track     The requested track
+	 * @param shipments The requested shipments
+	 *
+	 * @return The Aggregation matching the request parameters
+	 */
 	@GetMapping
 	public Aggregation get(
 			@RequestParam(name = "pricing", required = false) List<String> pricing,

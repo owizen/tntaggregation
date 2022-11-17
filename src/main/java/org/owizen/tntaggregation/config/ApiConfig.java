@@ -4,6 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 
+/**
+ * Configuration to acess the remote API
+ */
 @Configuration
 @ConfigurationProperties(prefix = "tnt.aggregation")
 public class ApiConfig {

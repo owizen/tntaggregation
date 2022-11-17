@@ -9,6 +9,12 @@ import org.slf4j.LoggerFactory;
 
 import reactor.core.publisher.Mono;
 
+/**
+ * The Runnable responsible for asynchronously fetching data from the remote API.
+ *
+ * @param <K> The type of the key of the remote API data
+ * @param <V> The type of the value of the remote API data
+ */
 public class FetchRunnable<K, V> implements Runnable {
 
 	private List<K> candidates;

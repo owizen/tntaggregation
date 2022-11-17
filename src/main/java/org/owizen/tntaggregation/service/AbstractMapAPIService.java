@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.owizen.tntaggregation.service.fetch.FetchRunnableProvider;
@@ -17,6 +19,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import reactor.core.publisher.Mono;
 
 
 public abstract class AbstractMapAPIService<K, V> {
@@ -90,7 +94,7 @@ public abstract class AbstractMapAPIService<K, V> {
 		return System.currentTimeMillis() - lastInsert > FETCH_MAX_TIME_ELAPSED;
 	}
 
-	public Map<K,V> fetch(List<K> keys) {
+	public Mono<Map<K, V>> fetch(List<K> keys) {
 		return client.get()
 				.uri(uriBuilder -> uriBuilder
 					.path(path)
@@ -98,7 +102,7 @@ public abstract class AbstractMapAPIService<K, V> {
 				    .build())
 				.accept(MediaType.APPLICATION_JSON)
 				.retrieve()
-				.bodyToMono(mapTypeRef).block();
+				.bodyToMono(mapTypeRef);
 	}
 
 	private void submit(List<K> keys, CompletableFuture<Map<K,V>> future) {
@@ -140,6 +144,31 @@ public abstract class AbstractMapAPIService<K, V> {
 		executor.execute(provider.getFetchRunnable(this, candidates));
 	}
 
+	public void update(List<K> candidates, Map<K, V> bulk) {
+		for (Entry<CompletableFuture<Map<K, V>>, List<K>> entry : pending.entrySet()) {
+			List<K> keys = entry.getValue();
+
+			if (! candidates.containsAll(keys)) {
+				continue;
+			}
+
+			CompletableFuture<Map<K, V>> future = entry.getKey();
+
+			Map<K, V> complete = keys.stream()
+					.collect(Collectors.toMap(Function.identity(), k -> bulk.get(k)));
+
+			int oldSize = pending.size();
+
+			pending.remove(future);
+
+			logger.info("Future completed, {} left from {} in {} at {}", pending.size(), oldSize, serviceName, System.currentTimeMillis());
+
+			future.complete(complete);
+		}
+
+		fetching = false;
+	}
+
 	public void invalidate(String msg) {
 		for (CompletableFuture<Map<K,V>> future : pending.keySet()) {
 			logger.info("Error occured when fetching data with reason: {}", msg);
@@ -147,6 +176,8 @@ public abstract class AbstractMapAPIService<K, V> {
 		}
 
 		pending.clear();
+
+		fetching = false;
 	}
 
 	protected CompletableFuture<Map<K,V>> get(List<K> items) throws InterruptedException {

@@ -8,7 +8,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -54,10 +53,6 @@ public abstract class AbstractMapAPIService<K, V> {
 	 */
 	private String path;
 	/**
-	 * The Executor to execute asynchonous task
-	 */
-	private Executor executor;
-	/**
 	 * The queue to store the requested key to the remote API for further processing
 	 */
 	private ArrayBlockingQueue<K> queue = new ArrayBlockingQueue<K>(10);
@@ -85,13 +80,12 @@ public abstract class AbstractMapAPIService<K, V> {
 	 * @param mapTypeRef The ParameterizedTypeReference to wrap the parameterized type of the Maps from the remote API
 	 * @param executor
 	 */
-	public AbstractMapAPIService(String apiUrl, String path, ParameterizedTypeReference<Map<K, V>> mapTypeRef, Executor executor) {
+	public AbstractMapAPIService(String apiUrl, String path, ParameterizedTypeReference<Map<K, V>> mapTypeRef) {
 		super();
 
 		this.path       = path;
 		this.client     = WebClient.create(apiUrl);
 		this.mapTypeRef = mapTypeRef;
-		this.executor   = executor;
 	}
 
 	/**

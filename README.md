@@ -18,6 +18,6 @@ The assignmnt is made using Spring Boot.
         - For windows: *./mvnw spring-boot:run*
         - For Mac/Linux: mvn spring-boot:run
     - Or from an IDE
-- The application is reachable at the URL:  *http://localhost:8081/*
+- The application is reachable at the URL:  *http://localhost:8081/aggregation*
 - Additionally, you can adjust the log level if desired from the *application.properties* by modifiyng the key *logging.level.root* to DEBUG or other
 

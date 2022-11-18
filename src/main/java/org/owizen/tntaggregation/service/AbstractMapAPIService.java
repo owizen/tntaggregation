@@ -12,15 +12,12 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.owizen.tntaggregation.service.fetch.FetchRunnableProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import reactor.core.publisher.Mono;
 
 
 /**
@@ -68,13 +65,7 @@ public abstract class AbstractMapAPIService<K, V> {
 	 * The actual requests to be fulfilled as response of the rest controller calls.
 	 */
 	private Map<CompletableFuture<Map<K,V>>, List<K>> pending = new ConcurrentHashMap<>();
-	/**
-	 * The workaround too instantiate FetchRunnables.
-	 */
-	private FetchRunnableProvider provider = new FetchRunnableProvider();
-
 	private Logger logger = LoggerFactory.getLogger(getClass());
-
 	private String serviceName = getClass().getSimpleName();
 	/**
 	 * Flag to prevent request to the API to occur simultaneously
@@ -151,15 +142,20 @@ public abstract class AbstractMapAPIService<K, V> {
 	 *
 	 * @return
 	 */
-	public Mono<Map<K, V>> fetch(List<K> keys) {
-		return client.get()
-				.uri(uriBuilder -> uriBuilder
-					.path(path)
-				    .queryParam(API_QUERY, toQuery(keys))
-				    .build())
-				.accept(MediaType.APPLICATION_JSON)
-				.retrieve()
-				.bodyToMono(mapTypeRef);
+	private void fetch(List<K> keys) {
+		client.get()
+			.uri(uriBuilder -> uriBuilder
+				.path(path)
+			    .queryParam(API_QUERY, toQuery(keys))
+			    .build())
+			.accept(MediaType.APPLICATION_JSON)
+			.retrieve()
+			.bodyToMono(mapTypeRef).subscribe(
+					// On success
+					bulk -> update(keys, bulk),
+					// On error
+					e -> invalidate(e.getMessage())
+				);
 	}
 
 	/**
@@ -209,7 +205,7 @@ public abstract class AbstractMapAPIService<K, V> {
 
 		queue.drainTo(candidates, size);
 
-		executor.execute(provider.getFetchRunnable(this, candidates));
+		fetch(candidates);
 	}
 
 	/**
@@ -218,7 +214,7 @@ public abstract class AbstractMapAPIService<K, V> {
 	 * @param candidates The keys that were requested from the remote API
 	 * @param bulk       The return mapped values by keys of the remote API
 	 */
-	public void update(List<K> candidates, Map<K, V> bulk) {
+	private void update(List<K> candidates, Map<K, V> bulk) {
 		for (Entry<CompletableFuture<Map<K, V>>, List<K>> entry : pending.entrySet()) {
 			List<K> keys = entry.getValue();
 
@@ -247,7 +243,7 @@ public abstract class AbstractMapAPIService<K, V> {
 	 * Flush the pending requests and complete the pending CompletableFuture
 	 * @param msg
 	 */
-	public void invalidate(String msg) {
+	private void invalidate(String msg) {
 		for (CompletableFuture<Map<K,V>> future : pending.keySet()) {
 			logger.info("Error occured when fetching data with reason: {}", msg);
 			future.completeExceptionally(new RuntimeException(msg));
@@ -281,18 +277,6 @@ public abstract class AbstractMapAPIService<K, V> {
 		}
 
 		return future;
-	}
-
-	public Map<CompletableFuture<Map<K, V>>, List<K>> getPending() {
-		return pending;
-	}
-
-	public String getServiceName() {
-		return serviceName;
-	}
-
-	public void setFetching(boolean fetching) {
-		this.fetching = fetching;
 	}
 
 	protected String toQuery(List<K> items) {
